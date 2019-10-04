@@ -11,7 +11,7 @@ f.close()
 setup(
     name='insprd',
     version=VERSION,
-    description='Python interface to Inspired Platform',
+    description='Python interface into Inspired Platform',
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
     author='Jeff Trudeau',
@@ -21,6 +21,11 @@ setup(
     packages=find_packages(exclude=['ez_setup', 'tests*']),
     package_data={'insprd': ['templates/*']},
     include_package_data=True,
+    install_requires=[
+        'cryptography==2.7',
+        'PyJWT==1.7.1',
+        'requests==2.22.0',
+    ],
     entry_points="""
         [console_scripts]
         insprd = insprd.main:main
