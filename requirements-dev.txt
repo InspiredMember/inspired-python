@@ -1,0 +1,13 @@
+-r requirements.txt
+
+cement==3.0.4
+colorlog
+jinja2
+pyyaml
+
+coverage
+pytest
+pytest-cov
+setuptools>=38.6.0
+twine>=1.11.0
+wheel>=0.31.0
