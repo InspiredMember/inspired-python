@@ -1,12 +1,14 @@
+from setuptools import find_packages, setup
 
-from setuptools import setup, find_packages
-from insprd.core.version import get_version
+from insprd import version
+from insprd.utils.version import get_version
 
-VERSION = get_version()
 
-f = open('README.md', 'r')
-LONG_DESCRIPTION = f.read()
-f.close()
+VERSION = get_version(version)
+
+with open('README.md', 'r') as f:
+    LONG_DESCRIPTION = f.read()
+
 
 setup(
     name='insprd',
@@ -26,8 +28,7 @@ setup(
         'PyJWT==1.7.1',
         'requests==2.22.0',
     ],
+    python_requires='>=3.6',
     entry_points="""
-        [console_scripts]
-        insprd = insprd.main:main
     """,
 )

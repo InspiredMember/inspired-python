@@ -1,11 +1,9 @@
-"""
-PyTest Fixtures.
-"""
-
 import pytest
-from cement import fs
 
-@pytest.fixture(scope="function")
+from insprd.utils import fs
+
+
+@pytest.fixture(scope='function')
 def tmp(request):
     """
     Create a `tmp` object that geneates a unique temporary directory, and file

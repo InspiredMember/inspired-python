@@ -1,10 +1,5 @@
 -r requirements.txt
 
-cement==3.0.4
-colorlog
-jinja2
-pyyaml
-
 coverage
 pytest
 pytest-cov

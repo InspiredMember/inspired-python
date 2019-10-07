@@ -3,7 +3,7 @@ from datetime import datetime, timedelta, timezone
 import jwt
 import requests
 
-from . import rsa
+from ..utils import rsa
 
 
 JWT_ALG = 'RS256'
