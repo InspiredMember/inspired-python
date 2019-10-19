@@ -1,1 +1,1 @@
-from .client import PublisherClient
+from .publisher import PublisherClient

@@ -16,7 +16,8 @@ class PublisherClient(object):
         'create': 'v1/create/',
     }
 
-    def __init__(self, base_url,
+    def __init__(self,
+                 base_url,
                  publisher_id=None,
                  signing_key_id=None,
                  signing_key_data=None, signing_key_file=None,
@@ -33,10 +34,14 @@ class PublisherClient(object):
             self.signing_key = rsa.deserialize_pem(signing_key_data)
         else:
             raise ValueError('Must provide one of (signing_key_data, signing_key_file)')
-        #self.base_url = f'https://{base_url}/platform/publishers'
-        self.base_url = 'https://fgdsawlhnb.execute-api.us-east-1.amazonaws.com/dev/publishers'
+        self.base_url = f'https://{base_url}/publishers'
         self.publisher_id = publisher_id
         self.token_ttl = timedelta(seconds=token_ttl)
+
+    def _http_post(self, url_name, *args, **kwargs):
+        response = requests.post(f'{self.base_url}/{self.urls[url_name]}', *args, **kwargs)
+        response.raise_for_status()
+        return response
 
     def _jwt_create_headers(self, user_id=None):
         now = datetime.utcnow().replace(tzinfo=timezone.utc)
@@ -65,11 +70,6 @@ class PublisherClient(object):
         payload = self._jwt_create_payload(user_id)
         return jwt.encode(payload, self.signing_key, algorithm=JWT_ALG, headers=headers)
 
-    def _http_post(self, url_name, *args, **kwargs):
-        response = requests.post(f'{self.base_url}/{self.urls[url_name]}', *args, **kwargs)
-        response.raise_for_status()
-        return response
-
     def create(self, name, email):
         if self.publisher_id:
             return
@@ -80,4 +80,6 @@ class PublisherClient(object):
             'public_key': rsa.serialize_public_key(self.signing_key).decode('utf-8'),
         })
         response = self._http_post('create', data=data)
-        return response.json()
+        result = response.json()
+        self.publisher_id = result['id']
+        return result
