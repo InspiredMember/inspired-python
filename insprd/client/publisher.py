@@ -11,13 +11,27 @@ JWT_ALG = 'RS256'
 JWT_ISS = 'Inspired'
 
 
+def http_request_method(method):
+    def request_method(self, url_name, *args, raise_for_status=True, **kwargs):
+        url = f'{self.base_url}/{self.urls[url_name]}'.format(
+            publisher_id=self.publisher_id,
+        )
+        response = getattr(requests, method)(url, *args, **kwargs)
+        print(f'{response.status_code} {response.url}')
+        if raise_for_status:
+            response.raise_for_status()
+        return response
+    return request_method
+
+
 class PublisherClient(object):
     urls = {
-        'create': 'v1/create/',
+        'create': 'create/',
+        'test': 'test/{publisher_id}/',
     }
 
     def __init__(self,
-                 base_url,
+                 platform_domain,
                  publisher_id=None,
                  signing_key_id=None,
                  signing_key_data=None, signing_key_file=None,
@@ -34,36 +48,31 @@ class PublisherClient(object):
             self.signing_key = rsa.deserialize_pem(signing_key_data)
         else:
             raise ValueError('Must provide one of (signing_key_data, signing_key_file)')
-        self.base_url = f'https://{base_url}/publishers'
+        self.base_url = f'https://{platform_domain}/publishers'
         self.publisher_id = publisher_id
         self.token_ttl = timedelta(seconds=token_ttl)
 
-    def _http_post(self, url_name, *args, **kwargs):
-        response = requests.post(f'{self.base_url}/{self.urls[url_name]}', *args, **kwargs)
-        response.raise_for_status()
-        return response
+    _http_get = http_request_method('get')
+    _http_post = http_request_method('post')
 
     def _jwt_create_headers(self, user_id=None):
-        now = datetime.utcnow().replace(tzinfo=timezone.utc)
-        if user_id is not None:
-            sub = f'insprd://clients/{self.publisher_id}/users/{user_id}'
-        else:
-            sub = f'insprd://clients/{self.publisher_id}'
         return {
-            'iss': JWT_ISS,
             'kid': self.signing_key_id,
-            'sub': sub,
-            'iat': int(now.timestamp()),
-            'exp': int((now + self.token_ttl).timestamp()),
         }
 
     def _jwt_create_payload(self, user_id=None):
-        payload = {
-            'publisher_id': self.publisher_id,
-        }
+        now = datetime.utcnow().replace(tzinfo=timezone.utc)
         if user_id is not None:
-            payload['user_id'] = user_id
-        return payload
+            sub = f'insprd://publishers/{self.publisher_id}/users/{user_id}'
+        else:
+            sub = f'insprd://publishers/{self.publisher_id}'
+        return {
+            'iss': JWT_ISS,
+            'sub': sub,
+            'aud': 'insprd://publishers',
+            'iat': int(now.timestamp()),
+            'exp': int((now + self.token_ttl).timestamp()),
+        }
 
     def _jwt_create_token(self, user_id=None):
         headers = self._jwt_create_headers(user_id)
@@ -83,3 +92,9 @@ class PublisherClient(object):
         result = response.json()
         self.publisher_id = result['id']
         return result
+
+    def test(self):
+        if not self.publisher_id:
+            return
+        response = self._http_get('test', headers={'Authorization': self._jwt_create_token()})
+        return response
