@@ -27,7 +27,7 @@ def http_request_method(method):
 class PublisherClient(object):
     urls = {
         'create': 'create/',
-        'test': 'test/{publisher_id}/',
+        'test': '{publisher_id}/test',
     }
 
     def __init__(self,
