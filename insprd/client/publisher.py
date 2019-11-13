@@ -1,8 +1,10 @@
 import json
+import logging
 from datetime import datetime, timedelta, timezone
 
 import jwt
 import requests
+from requests.exceptions import HTTPError
 
 from ..utils import rsa
 
@@ -11,15 +13,23 @@ JWT_ALG = 'RS256'
 JWT_ISS = 'Inspired'
 
 
+logger = logging.getLogger()
+
+
 def http_request_method(method):
     def request_method(self, url_name, *args, raise_for_status=True, **kwargs):
         url = f'{self.base_url}/{self.urls[url_name]}'.format(
             publisher_id=self.publisher_id,
         )
         response = getattr(requests, method)(url, *args, **kwargs)
-        print(f'{response.status_code} {response.url}')
         if raise_for_status:
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except HTTPError as e:
+                e.args = (f'{e.args[0]} {response.json()}',)
+                raise e
+            else:
+                logger.info(f'{response.status_code} {response.url}')
         return response
     return request_method
 
@@ -79,10 +89,11 @@ class PublisherClient(object):
         payload = self._jwt_create_payload(user_id)
         return jwt.encode(payload, self.signing_key, algorithm=JWT_ALG, headers=headers)
 
-    def create(self, name, email):
+    def create(self, create_code, name, email):
         if self.publisher_id:
             return
         data = json.dumps({
+            'create_code': create_code,
             'email': email,
             'name': name,
             'key_id': self.signing_key_id,
