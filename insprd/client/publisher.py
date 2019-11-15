@@ -17,9 +17,10 @@ logger = logging.getLogger()
 
 
 def http_request_method(method):
-    def request_method(self, url_name, *args, raise_for_status=True, **kwargs):
+    def request_method(self, url_name, *args, customer_id=None, raise_for_status=True, **kwargs):
         url = f'{self.base_url}/{self.urls[url_name]}'.format(
             publisher_id=self.publisher_id,
+            customer_id=customer_id,
         )
         response = getattr(requests, method)(url, *args, **kwargs)
         if raise_for_status:
@@ -35,9 +36,12 @@ def http_request_method(method):
 
 
 class PublisherClient(object):
+    # url is prefixed with publishers/
     urls = {
-        'create': 'create/',
+        'create': 'create',
         'test': '{publisher_id}/test',
+        'customer_create': '{publisher_id}/customers/create',
+        'customer_test': '{publisher_id}/customers/{customer_id}/test',
     }
 
     def __init__(self,
@@ -65,15 +69,15 @@ class PublisherClient(object):
     _http_get = http_request_method('get')
     _http_post = http_request_method('post')
 
-    def _jwt_create_headers(self, user_id=None):
+    def _jwt_create_headers(self, customer_id=None):
         return {
             'kid': self.signing_key_id,
         }
 
-    def _jwt_create_payload(self, user_id=None):
+    def _jwt_create_payload(self, customer_id=None):
         now = datetime.utcnow().replace(tzinfo=timezone.utc)
-        if user_id is not None:
-            sub = f'insprd://publishers/{self.publisher_id}/users/{user_id}'
+        if customer_id is not None:
+            sub = f'insprd://publishers/{self.publisher_id}/customers/{customer_id}'
         else:
             sub = f'insprd://publishers/{self.publisher_id}'
         return {
@@ -84,9 +88,9 @@ class PublisherClient(object):
             'exp': int((now + self.token_ttl).timestamp()),
         }
 
-    def _jwt_create_token(self, user_id=None):
-        headers = self._jwt_create_headers(user_id)
-        payload = self._jwt_create_payload(user_id)
+    def _jwt_create_token(self, customer_id=None):
+        headers = self._jwt_create_headers(customer_id)
+        payload = self._jwt_create_payload(customer_id)
         return jwt.encode(payload, self.signing_key, algorithm=JWT_ALG, headers=headers)
 
     def create(self, create_code, name, email):
@@ -109,3 +113,22 @@ class PublisherClient(object):
             return
         response = self._http_get('test', headers={'Authorization': self._jwt_create_token()})
         return response
+
+    def customer_create(self, customer_id):
+        if not self.publisher_id:
+            return
+        data = json.dumps({
+            'customer_id': customer_id,
+        })
+        response = self._http_post('customer_create', customer_id=customer_id, data=data,
+                                   headers={'Authorization': self._jwt_create_token()})
+        result = response.json()
+        return result
+
+    def customer_test(self, customer_id):
+        if not self.publisher_id:
+            return
+        response = self._http_get('customer_test', customer_id=customer_id,
+                                  headers={'Authorization': self._jwt_create_token(customer_id)})
+        result = response.json()
+        return result
