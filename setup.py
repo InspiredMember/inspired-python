@@ -24,7 +24,7 @@ setup(
     package_data={'insprd': ['templates/*']},
     include_package_data=True,
     install_requires=[
-        'cryptography==2.7',
+        'cryptography==3.2',
         'PyJWT==1.7.1',
         'requests==2.22.0',
     ],
